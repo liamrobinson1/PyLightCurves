@@ -4,4 +4,5 @@ scipy
 matplotlib
 pywavefront
 pyglet
+black
 ###### Requirements with Version Specifiers ######
