@@ -12,18 +12,18 @@
 *
 ********************************************************************************************/
 
-#include "include/raylib.h"
-#include "include/rlgl.h"
+#include "engine_include/raylib.h"
+#include "engine_include/rlgl.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 //User-defined
-#include "include/lightcurvelib.c"
+#include "engine_include/lightcurvelib.c"
 
 #define RLIGHTS_IMPLEMENTATION
-#include "include/rlights.h"
+#include "engine_include/rlights.h"
 
 #define MAX_INSTANCES          25
 #define MAX_DATA_POINTS        10000

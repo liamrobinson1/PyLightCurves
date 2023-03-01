@@ -160,3 +160,6 @@ include/
 *.cfg
 BRDFRegistry
 LightCurveEngine
+*.lcc
+*.lcr
+.vscode
