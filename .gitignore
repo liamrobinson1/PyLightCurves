@@ -158,3 +158,5 @@ include/
 *.mp4
 *.png
 *.cfg
+BRDFRegistry
+LightCurveEngine

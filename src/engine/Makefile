@@ -11,9 +11,9 @@ else
 endif
 
 ifeq (${ARCH},arm)
-	USE_LIBRAYLIB := lib/libraylib_m1.a
+	USE_LIBRAYLIB := engine_lib/libraylib_m1.a
 else
-	USE_LIBRAYLIB := lib/libraylib.a
+	USE_LIBRAYLIB := engine_lib/libraylib.a
 endif
 
 report_init:
