@@ -39,7 +39,7 @@ i = 40
 Om = 40
 om = 55
 ma = 191
-(r, v) = rv_to_coe(a, e, i, Om, om, ma)
+(r, v) = coe_to_rv(a, e, i, Om, om, ma)
 
 cd = 0.5
 cs = 0.5

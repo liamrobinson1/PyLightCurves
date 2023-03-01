@@ -16,10 +16,7 @@ if test -f bin/activate; then
 
     # Runs all unit tests
     python3 unit_tests.py
-
-    # Run black for code formatting
-    black .
 else
-    echo "python venv didn't initialize correctly, Liam messed up"
+    echo "python venv failed to initialize, Liam messed up"
 fi
 

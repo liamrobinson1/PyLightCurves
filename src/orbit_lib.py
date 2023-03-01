@@ -52,7 +52,7 @@ def j2_acceleration(rvec: np.ndarray) -> np.ndarray:
     )
 
 
-def rv_to_coe(
+def coe_to_rv(
     a: float,
     e: float,
     i: float,
@@ -61,7 +61,7 @@ def rv_to_coe(
     ma: float,
     mu: float = AstroConstants.earth_mu,
 ) -> np.array:
-    """Converts position/velocity state to classical (Keplerian) orbital elements
+    """Converts classical (Keplerian) orbital elements to position/velocity state
 
     Args:
         a (float) [km]: Semi-major axis of the orbit
