@@ -1,0 +1,10 @@
+source bin/activate
+pip3 install -r requirements.txt
+
+# Set to YOUR local path to the directory containing LightCurveEngine.c 
+export LCEDIR="/Users/liamrobinson/Documents/Light-Curve-Inversion/Production-Standalone/Light-Curve-Interaction/OpenGL-Light-Curve-Generation"
+
+# Runs all unit tests
+python3 test.py
+
+# 

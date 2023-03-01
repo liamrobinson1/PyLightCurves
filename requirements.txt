@@ -1,0 +1,7 @@
+###### Requirements without Version Specifiers ######
+numpy
+scipy
+matplotlib
+pywavefront
+pyglet
+###### Requirements with Version Specifiers ######
