@@ -12,9 +12,19 @@ class Object:
     def __init__(
         self,
         obj_path: str = None,
-        obj_vf: Tuple[np.array, np.array] = None,
+        obj_vf: Tuple[np.ndarray, np.ndarray] = None,
         is_dual: bool = False,
     ):
+        """Initializes an instance of Object from either:
+            - a path to a *.obj file
+            - Vertex and face adjacency information
+
+        Args:
+            obj_path (str): Path to *.obj file to read
+            obj_vf (tuple[np.ndarray, np.ndarray]): Vertex and face triangle information
+            is_dual (bool): Flag to prevent building dual's dual (leading to infinite recursion)
+
+        """
         if obj_path is not None:
             self._obj = pywavefront.Wavefront(
                 obj_path, create_materials=True, collect_faces=True
@@ -31,6 +41,7 @@ class Object:
         self.flip_normals()
 
     def build_properties(self):
+        """Builds all relevant object properties for shape inversion or visualization"""
         self.vertices_on_each_face()
         self.compute_face_normals()
         self.compute_face_areas()
@@ -44,31 +55,39 @@ class Object:
             self.get_dual()
 
     def vertices_on_each_face(self):
+        """Computes a np.ndarray Nx3x3 of vertices on each face"""
         self.fv = self.v[self.f]
 
     def get_face_vertices(self) -> Tuple[np.ndarray]:
+        """Reshapes face vertices into tuple of all 1st vertices, 2nd vertices, 3rd vertices"""
         return (self.fv[:, 0, :], self.fv[:, 1, :], self.fv[:, 2, :])
 
     def compute_face_centroids(self):
+        """Computes the centroids of each face by averaging vertices"""
         (v1, v2, v3) = self.get_face_vertices()
         self.face_centroids = (v1 + v2 + v3) / 3
 
     def compute_face_normals(self):
+        """Computes the normals of each face"""
         (v1, v2, v3) = self.get_face_vertices()
         self.face_normals = hat(np.cross(v2 - v1, v3 - v1))
 
     def compute_face_areas(self):
+        """Computes the area of each face"""
         (v1, v2, v3) = self.get_face_vertices()
         self.face_areas = vecnorm(np.cross(v2 - v1, v3 - v1)).flatten() / 2
 
     def compute_supports(self):
+        """Computs the support (perpendicular distance from plane containing face to origin)"""
         (v1, _, _) = self.get_face_vertices()
         self.supports = dot(v1[self.all_to_unique, :], self.unique_normals)
 
     def compute_volume(self):
+        """Computs the volume via the supports and unique areas"""
         self.volume = 1 / 3 * np.sum(dot(self.supports, self.unique_areas))
 
     def unique_areas_and_normals(self):
+        """Finds groups of unique normals and areas to save rows elsewhere"""
         (self.unique_normals, self.all_to_unique, self.unique_to_all) = unique_rows(
             self.face_normals, return_index=True, return_inverse=True
         )
@@ -76,20 +95,26 @@ class Object:
         np.add.at(self.unique_areas, self.unique_to_all, self.face_areas)
 
     def get_egi(self):
+        """Computes the Extended Gaussian Image (EGI)"""
         self.egi = np.expand_dims(self.unique_areas, 1) * self.unique_normals
 
     def get_dual(self):
+        """Sets the dual object"""
         dual_v = self.unique_normals / self.supports
         dual_f = scipy.spatial.ConvexHull(dual_v).simplices
         self.dual = Object(obj_vf=(dual_v, dual_f), is_dual=True)
 
     def get_inner_vertices(self):
+        """Computes which vertices are within the convex hull (
+        not contained in any faces of the convhull)
+        """
         nvert = self.v.shape[0]
         self.verts_within_convhull = np.setdiff1d(
             np.arange(0, nvert), np.unique(self.f)
         )
 
     def flip_normals(self):
+        """For convex objects, flips any normal vectors pointing inside the object"""
         n_points_in = dot(self.face_centroids, self.face_normals).flatten() < 0
         if any(n_points_in):
             self.f[n_points_in, :] = np.array(
@@ -98,6 +123,15 @@ class Object:
             self.build_properties()
 
     def render(self, render_mode: str = "solid"):
+        """Plots the object mesh using a trisurf
+
+        Args:
+            render_mode (str): Mode option for rendering, currently only supports "solid"
+
+        Returns:
+
+
+        """
         linewidth = 0
         if render_mode == "wireframe":
             linewidth = 1
@@ -116,12 +150,33 @@ class Object:
 
 
 def build_dual(normals: np.array, supports: np.array) -> Object:
+    """Computes the polyhedral dual of the set of normals and supports
+
+    Args:
+        normals (np.ndarray nx3): Outward-facing normal vectors
+        supports (np.ndarray nx1): Support of each face (see get_supports above)
+
+    Returns:
+        Object: Dual object defined by the normals and supports
+
+    """
     dual_v = normals / supports
     dual_f = scipy.spatial.ConvexHull(dual_v).simplices
     return Object(obj_vf=(dual_v, dual_f), is_dual=True)
 
 
 def construct_from_egi_and_supports(egi: np.array, support: np.array) -> Object:
+    """Constructs an object from an input Extended Gaussian Image (EGI) and support set
+
+    Args:
+        egi (np.ndarray nx3): EGI of the object
+        support (np.ndarray nx1): Supports of each face in the EGI
+
+    Returns:
+        Object: Resulting convex object, with potentially fewer faces than
+        the original EGI depending on supports selected
+
+    """
     dual_obj = build_dual(hat(egi), np.expand_dims(support, axis=1))
     b = np.ones((dual_obj.f.shape[0], 3, 1))
     rec_obj_verts = np.reshape(
@@ -133,6 +188,18 @@ def construct_from_egi_and_supports(egi: np.array, support: np.array) -> Object:
 
 
 def support_reconstruction_error(egi: np.array, support: np.ndarray) -> float:
+    """Computes the error in the reconstruction of an object
+    from an Extended Gaussian Image (EGI) and support set
+
+    Args:
+        egi (np.ndarray nx3): EGI to attempt to reconstruct a convex polytope for
+        support (np.ndarray nx1): Supports that may or may not correctly
+            construct a polytope with the required EGI
+
+    Returns:
+        float: Support reconstruction error for optimization
+
+    """
     small_tol = 1e-4
     (rec_obj, rec_dual) = construct_from_egi_and_supports(egi, support)
     nrec = rec_obj.unique_normals.shape[0]
@@ -184,6 +251,17 @@ def support_reconstruction_error(egi: np.array, support: np.ndarray) -> float:
 
 
 def optimize_supports(egi: np.array) -> Object:
+    """Optimizes a support vector to construct
+    the polytope with the given Extended Gaussian Image (EGI)
+
+    Args:
+        egi (np.ndarray nx3): EGI to find supports for
+            (convergence only possible if the sum of rows is zero)
+
+    Returns:
+        Object: Produced from optimal set of supports
+
+    """
     h0 = np.sqrt(np.sum(vecnorm(egi)) / (4 * np.pi)) * np.ones(egi.shape[0])
     fun = lambda h: support_reconstruction_error(egi, h)
     res = scipy.optimize.minimize(

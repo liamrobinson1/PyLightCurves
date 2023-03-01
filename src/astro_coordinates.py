@@ -5,6 +5,18 @@ import numpy as np
 
 
 def ecef_to_eci(date) -> np.ndarray:
+    """Converts from Earth-centered, Earth-fixed (ECEF) coordinates
+    to Earth-centered inertial (ECI)
+
+    Does not account for precession, nutation, or polar motion
+
+    Args:
+        date (datetime.datetime): Time (utc) to evaluate at
+
+    Returns:
+        np.ndarray 3x3: Rotation matrix from ECEF to ECI
+
+    """
     (_, _, r3) = axis_rotation_matrices()
     sid_time = date_to_sidereal(date)
     # Gets the current sidereal time
@@ -14,7 +26,15 @@ def ecef_to_eci(date) -> np.ndarray:
 
 
 def sun(jd: np.array) -> np.array:
-    # Translation of Vallado's MATLAB method of the same name
+    """Translation of Vallado's MATLAB method of the same name
+
+    Args:
+        jd (np.ndarray nx1): Julian dates
+
+    Returns:
+        np.ndarray nx3 [AU]: Approximate vector to the Sun from Earth center
+
+    """
     if jd.size == 1:
         jd = np.array([jd])
     tut1 = (jd - 2451545.0) / 36525.0

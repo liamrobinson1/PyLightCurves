@@ -6,6 +6,15 @@ import scipy
 
 
 def two_body_dynamics(rv: np.ndarray) -> np.ndarray:
+    """Relative two-body dynamics for orbits
+
+    Args:
+        rv (np.ndarray 1x6) [km, km/s]: Position [:3] and velocity [3:] of the satellite
+
+    Returns:
+        np.ndarray 1x6: Time derivative of position and velocity states
+
+    """
     rvdot = np.empty(rv.shape)
     rvdot[:3] = rv[3:]
     rvdot[3:] = -AstroConstants.earth_mu * rv[:3] / np.linalg.norm(rv[:3]) ** 3
@@ -13,6 +22,15 @@ def two_body_dynamics(rv: np.ndarray) -> np.ndarray:
 
 
 def j2_acceleration(rvec: np.ndarray) -> np.ndarray:
+    """Acceleration due to the J2 perturbation (Earth oblateness)
+
+    Args:
+        rvec (np.ndarray 1x3) [km]: Position vector of the satellite
+
+    Returns:
+        np.ndarray 1x3 [km/s^2]: Acceleration due to J2
+
+    """
     re = AstroConstants.earth_r_eq
     mu = AstroConstants.earth_mu
     j2 = AstroConstants.earth_j2
@@ -43,6 +61,21 @@ def rv_to_coe(
     ma: float,
     mu: float = AstroConstants.earth_mu,
 ) -> np.array:
+    """Converts position/velocity state to classical (Keplerian) orbital elements
+
+    Args:
+        a (float) [km]: Semi-major axis of the orbit
+        e (float): Eccentricity
+        i (float) [deg]: Inclination
+        Om (float) [deg]: Right Ascension of the Ascending Node (RAAN)
+        om (float) [deg]: Argument of periapsis
+        ma (float) [deg]: Mean anomaly
+        mu (float) [km^3/s^2]: Gravitational parameter of central body
+
+    Returns:
+        np.array 1x6 [km, km/s]: State vector in position/velocity
+
+    """
     efun = lambda ea: np.deg2rad(ma) - np.deg2rad(ea) + e * sind(ea)
     ea = scipy.optimize.fsolve(efun, ma)  # Eccentric anomaly
     ta = wrap_to_360(

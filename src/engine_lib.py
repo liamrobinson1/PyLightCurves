@@ -7,12 +7,28 @@ from .light_lib import Brdf
 def run_engine(
     brdf: Brdf,
     model_file: str,
-    svb: np.array,
-    ovb: np.array,
+    svb: np.ndarray,
+    ovb: np.ndarray,
     save_imgs: bool = False,
     output_dir: str = None,
     instance_count: int = 9,
-) -> np.array:
+) -> np.ndarray:
+    """Runs the LightCurveEngine executable on the input model, observation geometry, and BRDF
+
+    Args:
+        brdf (Brdf): BRDF to use
+        model_file (str): *.obj to use
+        svb (np.ndarray nx3): Sun vectors in the object body frame
+        ovb (np.ndarray nx3): Observer vectors in the object body frame
+        save_imgs (bool): Flag to output rendered images to calling_directory/out
+        output_dir (str): Directory to output images to
+        instance_count (0 < int <= 25): Instances to render at once,
+            leads to roughly linear performance improvement
+
+    Returns:
+        np.ndarray (nx1): Irradiance at unit distance in given geometries
+
+    """
     assert (
         instance_count <= 25 and instance_count > 0
     ), "Engine runs with 0 < instance_count <= 25"
@@ -56,18 +72,46 @@ def run_engine(
     return np.array([float(x) for x in lc_data])
 
 
-def run_brdf_registry(arg: str) -> int:
+def run_brdf_registry(name_or_all: str) -> int:
+    """Finds the index of a BRDF name
+
+    Args:
+        name_or_all (str): A BRDF name (e.g. 'phong')
+            or 'all' to get a list of all registered BRDFs
+
+    Returns:
+        int: Index of BRDF as known by the BRDFRegistry.c executable
+
+    """
     lce_dir = os.environ["LCEDIR"]
     brdf_registry_path = f"{lce_dir}/BRDFRegistry"
-    # Not sure why it's misinterpreting the output (hence // 256)
-    return os.system(f"{brdf_registry_path} {arg}") // 256
+    # TODO: Not sure why it's misinterpreting the output (hence // 256)
+    return os.system(f"{brdf_registry_path} {name_or_all}") // 256
 
 
 def print_all_registered_brdfs():
+    """Prints all BRDFs registered in the BRDFRegistry.c executable
+
+    Args:
+
+
+    Returns:
+
+
+    """
     run_brdf_registry("all")
 
 
 def query_brdf_registry(brdf: Brdf) -> int:
+    """Figures out if a BRDF is valid, and if it is, returns its registry index
+
+    Args:
+        brdf (Brdf): BRDF to check
+
+    Returns:
+        int: Index of BRDF as known by the BRDFRegistry.c executable
+
+    """
     brdf_ind = run_brdf_registry(brdf.name)
     assert brdf_ind < 200, "BRDF name not valid!"
     return brdf_ind
@@ -75,7 +119,18 @@ def query_brdf_registry(brdf: Brdf) -> int:
 
 def write_light_curve_command_file(
     svb: np.array, ovb: np.array, command_file="light_curve0.lcc"
-):
+) -> None:
+    """Writes the command file read by the LightCurveEngine.c executable
+
+    Args:
+        svb (np.ndarray nx3): Sun vectors in the object body frame
+        ovb (np.ndarray nx3): Observer vectors in the object body frame
+        command_file (str): Command file name read by LightCurveEngine
+
+    Returns:
+
+
+    """
     lce_dir = os.environ["LCEDIR"]
 
     with open(f"{lce_dir}/{command_file}", "w") as f:

@@ -4,13 +4,35 @@ import numpy as np
 
 
 def rand_unit_vectors(num: int) -> np.ndarray:
+    """Generates uniform random vectors on S^2
+
+    Args:
+        num (int): Number of unit vectors to generate
+
+    Returns:
+        np.ndarray num x 3: Sampled unit vectors
+
+    """
     return rand_cone_vectors(np.array([1, 0, 0]), np.pi, num)
 
 
-def rand_cone_vectors(cone_axis: np.array, theta: float, num: int) -> np.array:
+def rand_cone_vectors(
+    cone_axis: np.array, cone_half_angle: float, num: int
+) -> np.array:
+    """Generates uniform random unit vectors in a cone
+
+    Args:
+        cone_axis (np.ndarray 1x3): Axis of symmetry for the cone
+        cone_half_angle (float): Half-angle of the cone
+        num (int): Number of vectors to sample
+
+    Returns:
+        np.ndarray num x 3: Sampled unit vectors
+
+    """
     r1 = np.random.rand(num)
     r2 = np.random.rand(num)
-    z = (1 - np.cos(theta)) * r1 + np.cos(theta)
+    z = (1 - np.cos(cone_half_angle)) * r1 + np.cos(cone_half_angle)
     phi = 2 * np.pi * r2
 
     ref = hat(np.array([0, 0, 1]))

@@ -4,6 +4,15 @@ from typing import Any
 
 
 def date_to_ut(date) -> float:
+    """Converts a datetime object to Universal Time (UT)
+
+    Args:
+        date (datetime.datetime) [UTC]: Date object to compute UT for
+
+    Returns:
+        float [hr]: UT at input date
+
+    """
     assert date.year > 1582, ValueError("date must be after 1582")
     beginning_of_day = datetime(
         date.year, date.month, date.day, 00, 00, 00, 00, tzinfo=timezone.utc
@@ -15,6 +24,15 @@ def date_to_ut(date) -> float:
 
 
 def date_to_jd(date: Any) -> float:
+    """Converts datetime to Julian date
+
+    Args:
+        date (datetime.datetime) [UTC]: Date object to compute UT for
+
+    Returns:
+        float: Julian date of input date
+
+    """
     ut = date_to_ut(date)
     if date.month <= 2:  # If the month is Jan or Feb
         y = date.year - 1
@@ -35,6 +53,15 @@ def date_to_jd(date: Any) -> float:
 
 
 def date_to_sidereal(date) -> float:
+    """Converts a datetime to sidereal time
+
+    Args:
+        date (datetime.datetime) [UTC]: Date object to compute UT for
+
+    Returns:
+        float: Sidereal time at the input date
+
+    """
     beginning_of_day = datetime(
         date.year, date.month, date.day, 00, 00, 00, 00, tzinfo=timezone.utc
     )
