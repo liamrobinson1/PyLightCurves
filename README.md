@@ -4,6 +4,7 @@
 # Installation
 
 ## Mac (Intel or Apple CPU)
+- Prerequisites: `clang` compiler and `python3` (both should be installed by default)
 - Clone repository to local folder
 - Open terminal at repository top-level folder
 - Run `source init_venv` to create and activate a python virtual environment, install dependencies, compile C executables for OpenGL light curve simulation, and run unit tests

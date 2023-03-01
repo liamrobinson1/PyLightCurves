@@ -118,8 +118,8 @@ class TestOrbits(MyTestMethods):
     def test_gg_torque(self):
         d = rv_to_dcm(v[0, :])
         irot = np.transpose(d) @ i @ d
-        m_gg = gravity_gradient_torque(irot, rv[:3])
-        m_gg_truth = np.array([0, -0.700039616569510e-6, -0.068416322484417e-6])
+        m_gg = gravity_gradient_torque(irot, rv[:3]) * 1e9
+        m_gg_truth = np.array([0, -0.700039616569510, -0.068416322484417])
         self.assertAlmostVectorEqual(m_gg, m_gg_truth)
 
     def test_rotation_dynamics(self):

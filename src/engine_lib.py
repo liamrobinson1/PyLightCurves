@@ -35,7 +35,7 @@ def run_engine(
     assert (
         svb.shape[1] == 3 and ovb.shape[1] == 3
     ), "Engine requires n x 3 numpy arrays as input for sun and observer vectors"
-    assert model_file[4:] == ".obj", "Model file must be *.obj"
+    assert model_file[-4:] == ".obj", "Model file must be *.obj"
     lce_dir = os.environ["LCEDIR"]
     model_dir = os.environ["MODELDIR"]
 

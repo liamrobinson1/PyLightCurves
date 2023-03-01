@@ -3,6 +3,28 @@ from .astro_const import AstroConstants
 from .math_utility import *
 from .attitude_lib import axis_rotation_matrices
 import scipy
+from typing import Callable
+
+def integrate_orbit_dynamics(rv0: np.ndarray,
+                             perturbations: Callable,
+                             teval: np.ndarray,
+                             int_tol=1e-13) -> np.ndarray:
+    """Integration for orbital dynamics with perturbations
+
+    Args:
+        rv0 (np.ndarray 1x6): Initial position and velocity state in Earth-centered inertial coordinates
+        pertubations (Callable(t,rv0) -> np.ndarray 1x3) [Nm]: Accelerations applied to the body due to perturbing forces
+        teval (np.ndarray 1xn) [seconds]: Times to return integrated trajectory at
+        int_tol (float): Integration rtol and atols for RK45
+
+    Returns:
+        np.ndarray nx7: Integrated quaternion [:4, :] and angular velocity [4:, :]
+
+    """
+    fun = lambda t, y: two_body_dynamics(y) + perturbations(t,y)
+    tspan = [np.min(teval), np.max(teval)]
+    ode_res = scipy.integrate.solve_ivp(fun, tspan, rv0, t_eval=teval, rtol=int_tol, atol=int_tol)
+    return ode_res.y.T
 
 
 def two_body_dynamics(rv: np.ndarray) -> np.ndarray:

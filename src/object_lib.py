@@ -1,17 +1,21 @@
 import pywavefront
 import matplotlib.tri as mtri
 import matplotlib.pyplot as plt
+import os
 import numpy as np
 import scipy
 from typing import Tuple
-from .math_utility import hat, vecnorm, dot, unique_rows, points_to_planes
+
+from .math_utility import *
+from .rand_geom import *
 from .vis_utility import vec2cdata
+from .light_lib import Brdf
 
 
 class Object:
     def __init__(
         self,
-        obj_path: str = None,
+        obj_file: str = None,
         obj_vf: Tuple[np.ndarray, np.ndarray] = None,
         is_dual: bool = False,
     ):
@@ -20,14 +24,16 @@ class Object:
             - Vertex and face adjacency information
 
         Args:
-            obj_path (str): Path to *.obj file to read
+            obj_file (str): *.obj file to read in $MODELDIR folder
             obj_vf (tuple[np.ndarray, np.ndarray]): Vertex and face triangle information
             is_dual (bool): Flag to prevent building dual's dual (leading to infinite recursion)
 
         """
-        if obj_path is not None:
+        if obj_file is not None:
+            self.file_name = obj_file
+            self.path = f"{os.environ['MODELDIR']}/{obj_file}"
             self._obj = pywavefront.Wavefront(
-                obj_path, create_materials=True, collect_faces=True
+                self.path, create_materials=True, collect_faces=True
             )
             self.v = np.array(self._obj.vertices)
             self.f = np.array(self._obj.mesh_list[0].faces)
@@ -147,6 +153,23 @@ class Object:
             shade=True,
             linewidth=linewidth,
         )
+
+    def compute_convex_light_curve(
+        self, brdf: Brdf, svb: np.ndarray, ovb: np.ndarray
+    ) -> np.ndarray:
+        """Computes the light curve of a covex object with a given BRDF
+
+        Args:
+            brdf (Brdf): BRDF to render with
+            svb (np.ndarray nx1): Sun unit vectors in the body frame
+            ovb (np.ndarray nx1): Observer unit vectors in the body frame
+
+        Returns:
+            np.ndarray nx1: Observed irradiance at 1 unit distance
+
+        """
+        g = brdf.compute_reflection_matrix(svb, ovb, self.unique_normals)
+        return g @ self.unique_areas
 
 
 def build_dual(normals: np.array, supports: np.array) -> Object:
@@ -273,3 +296,38 @@ def optimize_supports(egi: np.array) -> Object:
     )
     (rec_obj, _) = construct_from_egi_and_supports(egi, res.x)
     return rec_obj
+
+
+def optimize_egi(
+    lc: np.ndarray,
+    svb: np.ndarray,
+    ovb: np.ndarray,
+    brdf: Brdf,
+    num_candidates: int = int(1e3),
+    merge_iter: int = 1,
+    merge_angle: float = np.pi / 10,
+) -> np.ndarray:
+    """Optimizes an Extended Gaussian Image (EGI) to fit observed irradiances
+
+    Args:
+        lc (np.ndarray nx1): Unit irradiance light curve
+        svb (np.ndarray nx3): Sun unit vectors in the body frame for each observation
+        ovb (np.ndarray nx3): Observer unit vectors in the body frame
+        brdf (Brdf): BRDF to use
+        num_candidates (int): Number of candidate normal vectors to fit
+        merge_iter (int): Number of iterations for the merging step
+        merge_angle (float): Angle between vectors to merge by
+
+    Returns:
+        np.ndarray nx3: Optimized EGI
+
+    """
+    normal_candidates = rand_cone_vectors(np.array([0, 0, 1]), np.pi, num_candidates)
+    g_candidates = brdf.compute_reflection_matrix(svb, ovb, normal_candidates)
+    a_candidates = np.expand_dims(
+        scipy.optimize.nnls(g_candidates, lc.flatten())[0], axis=1
+    )
+    egi_candidate = normal_candidates * a_candidates
+    egi_candidate = remove_zero_rows(egi_candidate)
+    egi_candidate = merge_clusters(egi_candidate, merge_angle, miter=merge_iter)
+    return close_egi(egi_candidate)

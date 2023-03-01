@@ -1,18 +1,47 @@
 import numpy as np
+import scipy
 from typing import Tuple, Callable, Any
 from .math_utility import *
 from .astro_const import AstroConstants
 
+def integrate_rigid_attitude_dynamics(q0: np.ndarray,
+                                      omega0: np.ndarray, 
+                                      itensor: np.ndarray,
+                                      body_torque: Callable,
+                                      teval: np.ndarray,
+                                      int_tol=1e-13) -> np.ndarray:
+    """Integration for rigid body rotational dynamics
+
+    Args:
+        q0 (np.ndarray 1x3): Initial quaternion from inertial to body frame
+        omega0 (np.ndarray 1x3) [rad/s]: Angular velocity vector of body relative to inertial space
+        itensor (np.ndarray 3x3) [kg m^2]: Inertia tensor in principal axes, should be diagonal
+        body_torque (Callable -> np.ndarray 1x3) [Nm]: Torque applied to the body due to external forces
+        teval (np.ndarray 1xn) [seconds]: Times to return integrated trajectory at
+        int_tol (float): Integration rtol and atols for RK45
+
+    Returns:
+        np.ndarray nx7: Integrated quaternion [:4, :] and angular velocity [4:, :]
+
+    """
+    fun = lambda t, y: np.concatenate(
+        (quat_kinematics(y[:4], y[4:]), rigid_rotation_dynamics(t, y[4:], itensor, body_torque))
+    )
+    tspan = [np.min(teval), np.max(teval)]
+    y0 = np.concatenate((q0, omega0))
+    ode_res = scipy.integrate.solve_ivp(fun, tspan, y0, t_eval=teval, rtol=int_tol, atol=int_tol)
+    return ode_res.y.T
 
 def rigid_rotation_dynamics(
-    itensor: np.ndarray, w: np.ndarray, torque: np.ndarray = np.array([0, 0, 0])
+    t: float, w: np.ndarray, itensor: np.ndarray, torque: Callable = None
 ) -> np.ndarray:
     """Rigid body rotational dynamics (Euler's EOMs)
 
     Args:
         itensor (np.ndarray 3x3) [kg m^2]: Inertia tensor in principal axes, should be diagonal
+        t (float) [seconds]: Current integration time
         w (np.ndarray 1x3) [rad/s]: Angular velocity vector of body relative to inertial space
-        torque (np.ndarray 1x3) [Nm]: Torque applied to the body due to external forces
+        torque (Callable(t,y) -> np.ndarray 1x3) [Nm]: Torque applied to the body due to external forces
 
     Returns:
         np.ndarray: Time derivative of angular velocity vector
@@ -21,7 +50,10 @@ def rigid_rotation_dynamics(
     dwdt = np.zeros((3,))
     (ix, iy, iz) = np.diag(itensor)
     (wx, wy, wz) = w
-    (mx, my, mz) = torque
+    if torque is not None:
+        (mx, my, mz) = torque(t, w)
+    else:
+        (mx, my, mz) = (0, 0, 0)
 
     dwdt[0] = -1 / ix * (iz - iy) * wy * wz + mx / ix
     dwdt[1] = -1 / iy * (ix - iz) * wz * wx + my / iy
