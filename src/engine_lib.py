@@ -17,6 +17,7 @@ def run_engine(brdf: Brdf,
         'Engine requires n x 3 numpy arrays as input for sun and observer vectors'
     assert model_file[4:] == '.obj', 'Model file must be *.obj'
     lce_dir = os.environ['LCEDIR']
+    model_dir = os.environ['MODELDIR']
 
     cwd = os.getcwd()
     if output_dir is None:
@@ -37,7 +38,7 @@ def run_engine(brdf: Brdf,
     else:
         brdf_opt_str = f'-M -b {brdf_ind}'
     
-    opts_str = (f'-m {model_file} -i {instance_count} -c {svb.shape[0]}'
+    opts_str = (f'-m {model_dir}/{model_file} -i {instance_count} -c {svb.shape[0]}'
                 f' -r {results_file} -x {output_dir} {save_str} {brdf_opt_str}')
     run_str = f'{lce_dir}/LightCurveEngine {opts_str}'
     print(f'Running Light Curve Engine: \n{run_str}\n')

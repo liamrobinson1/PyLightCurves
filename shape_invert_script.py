@@ -7,7 +7,6 @@ from src.astro_coordinates import *
 from src.profile_utility import *
 from src.astro_const import *
 from src.light_lib import *
-
 import scipy
 
 p = np.array([[1,2,3], [2,3,4]])

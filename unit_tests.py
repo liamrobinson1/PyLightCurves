@@ -9,6 +9,8 @@ from src.observer_utility import *
 from src.astro_time_utility import *
 from src.astro_coordinates import *
 from src.light_lib import *
+from src.engine_lib import *
+from src.rand_geom import *
 
 v = np.array([[1,2,3], [2,3,4]])
 
@@ -207,6 +209,16 @@ class TestBRDF(MyTestMethods):
 
     def test_bad_brdf_name(self):
         self.assertRaises(AssertionError, lambda: Brdf('diffusee', 0.5, 0.5, 100))
+
+
+class TestEngine(MyTestMethods):
+
+    def test_engine_run(self):
+        engine_res = run_engine(Brdf('phong', 0.5, 0.5, 100),
+                                'cube.obj',
+                                hat(np.array([[1,1,1]])),
+                                hat(np.array([[1,1,1]])))
+        self.assertAlmostEqual(engine_res[0], 0.1575300000)
 
 if __name__ == '__main__':
     unittest.main()

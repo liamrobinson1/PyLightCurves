@@ -152,3 +152,8 @@ cython_debug/
 #.idea/
 
 .DS_Store
+bin/
+share/
+include/
+*.mp4
+*.png

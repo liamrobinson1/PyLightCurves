@@ -1,4 +1,4 @@
-from src.engine import *
+from src.engine_lib import *
 import numpy as np
 from src.rand_geom import *
 
@@ -11,7 +11,6 @@ print(brdf_ind)
 n = int(1e3)
 svb = rand_unit_vectors(n)
 ovb = rand_unit_vectors(n)
-write_light_curve_command_file(svb, ovb)
 engine_res = run_engine(b, model_file, svb, ovb)
 print(engine_res)
 print_all_registered_brdfs()
