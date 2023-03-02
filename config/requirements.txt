@@ -3,4 +3,5 @@ numpy
 scipy
 black
 pyvista
+colorcet
 ###### Requirements with Version Specifiers ######

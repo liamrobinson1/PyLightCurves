@@ -19,3 +19,6 @@
 
 # Configuration
 - The `MODELDIR` path set within `init_venv` can be set to a new directory containing `.obj` and `.mtl` files
+
+# Error Handling
+- If you see a `KeyError` for `os.environ['MODELDIR']`, simply run `source init_venv` again to redefine the environment variable

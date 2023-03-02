@@ -19,4 +19,3 @@ if test -f bin/activate; then
 else
     echo "python venv failed to initialize, Liam messed up"
 fi
-

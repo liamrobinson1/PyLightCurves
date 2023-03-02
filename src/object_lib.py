@@ -29,14 +29,14 @@ class Object:
         if obj_file is not None:
             self.file_name = obj_file
             self.path = f"{os.environ['MODELDIR']}/{obj_file}"
-            self._mesh= pv.read(self.path)
+            self._mesh = pv.read(self.path)
             self.f = self._mesh.faces.reshape(-1, 4)[:, 1:]
             self.v = self._mesh.points
         elif obj_vf is not None:
             self.v = obj_vf[0]
             self.f = obj_vf[1]
             padded_f = np.hstack(
-                (3*np.ones((self.f.shape[0],1), dtype=np.int64), self.f)
+                (3 * np.ones((self.f.shape[0], 1), dtype=np.int64), self.f)
             ).flatten()
             self._mesh = pv.PolyData(self.v, padded_f)
         else:
@@ -140,7 +140,6 @@ class Object:
         if pl is None:
             pl = pv.Plotter()
         pl.add_mesh(self._mesh, **kwargs)
-        pl.show()
 
     def compute_convex_light_curve(
         self, brdf: Brdf, svb: np.ndarray, ovb: np.ndarray

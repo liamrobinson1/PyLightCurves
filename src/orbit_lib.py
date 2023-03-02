@@ -5,6 +5,7 @@ from .attitude_lib import axis_rotation_matrices
 import scipy
 from typing import Callable
 from .attitude_lib import quat_kinematics, rigid_rotation_dynamics, quat_to_dcm
+from .astro_coordinates import sun
 
 
 def integrate_orbit_and_attitude(
@@ -19,7 +20,8 @@ def integrate_orbit_and_attitude(
 ) -> np.ndarray:
     fun = lambda t, y: np.concatenate(
         (
-            two_body_dynamics(y[0:6]) + orbit_perturbations(t, y[0:6]),
+            two_body_dynamics(y[0:6])
+            + np.concatenate(([0, 0, 0], orbit_perturbations(t, y[0:6]))),
             np.concatenate(
                 (
                     quat_kinematics(y[6:10], y[10:13]),
@@ -58,12 +60,33 @@ def integrate_orbit_dynamics(
         np.ndarray nx7: Integrated quaternion [:4, :] and angular velocity [4:, :]
 
     """
-    fun = lambda t, y: two_body_dynamics(y) + perturbations(t, y)
+    fun = lambda t, y: two_body_dynamics(y) + np.concatenate(
+        ([0, 0, 0], perturbations(t, y))
+    )
     tspan = [np.min(teval), np.max(teval)]
     ode_res = scipy.integrate.solve_ivp(
         fun, tspan, rv0, t_eval=teval, rtol=int_tol, atol=int_tol
     )
     return ode_res.y.T
+
+
+def sun_acceleration(rv: np.ndarray, jd: float) -> np.ndarray:
+    """Approximate 3rd body acceleration due to the Sun
+
+    Args:
+        rv (np.ndarray 1x6): Position and velocity state in Earth-centered inertial coordinates
+        jd (float) [days]: Julian date to evaluate at
+
+    Returns:
+        np.ndarray 1x6: Time derivative of position and velocity states
+
+    """
+    earth_to_sun = sun(jd).flatten() * AstroConstants.au_to_km
+    sat_to_sun = earth_to_sun - rv[0:3]
+    return -AstroConstants.sun_mu * (
+        earth_to_sun / np.linalg.norm(earth_to_sun) ** 3
+        - sat_to_sun / np.linalg.norm(sat_to_sun) ** 3
+    )
 
 
 def two_body_dynamics(rv: np.ndarray) -> np.ndarray:

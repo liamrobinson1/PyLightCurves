@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from typing import Union
 import pyvista as pv
 from .astro_const import AstroConstants
@@ -13,6 +14,7 @@ def plot_earth(pl: pv.Plotter):
         start_theta=270.001,
         end_theta=270,
     )
+    contours = sphere.contour(scalars=sphere.points[:, 2], isosurfaces=20)
     sph_hat_pts = hat(sphere.points)
     sphere.active_t_coords = np.zeros((sphere.points.shape[0], 2))
     sphere.active_t_coords[:, 0] = 0.5 + np.arctan2(
@@ -22,20 +24,20 @@ def plot_earth(pl: pv.Plotter):
 
     earth = pv.Texture("resources/textures/earth_tex.jpg")
     pl.add_mesh(sphere, texture=earth, smooth_shading=False)
+    # pl.add_mesh(contours,
+    #             render_lines_as_tubes=True,
+    #             line_width=3,
+    #             cmap="fire")
 
 
-def scatter3(
-    pl: pv.Plotter,
-    v: np.ndarray,
-    **kwargs
-):
-    """
+def scatter3(pl: pv.Plotter, v: np.ndarray, **kwargs):
+    """Replicates MATLAB scatter3() with pyvista backend
 
     Args:
         v (np.ndarray nx3): Vector to scatter
 
     Returns:
-        
+
 
     """
     assert 3 in v.shape, TypeError("scatter3 requires a 3xn or nx3 input vector")
@@ -43,6 +45,72 @@ def scatter3(
         v = np.transpose(v)
 
     pc = pv.PolyData(v)
-    pl.add_mesh(pc, 
-                render_points_as_spheres=True,
-                **kwargs)
+    pl.add_mesh(pc, render_points_as_spheres=True, **kwargs)
+
+
+def plot3(pl: pv.Plotter, v: np.ndarray, **kwargs):
+    """Replicates MATLAB plot3() with pyvista backend
+    Use densely scattered points to avoid confusing splines
+
+    Args:
+        v (np.ndarray nx3): Vector to plot
+
+    Returns:
+
+
+    """
+    assert 3 in v.shape, TypeError("plot3 requires a 3xn or nx3 input vector")
+    if v.shape[0] == 3:
+        v = np.transpose(v)
+
+    spline = pv.Spline(v, v.shape[0])
+    pl.add_mesh(spline, render_lines_as_tubes=True, **kwargs)
+
+
+def texit(ch: pv.Chart2D, title: str, xlabel: str, ylabel: str, zlabel: str = ""):
+    """All my prefered plot formatting, all in one place
+
+    Args:
+        ch (pyvista.Chart2D): Chart to format
+        title (str): Title string
+        xlabel (str): String for the x-axis
+        ylabel (str): String for the y-axis
+        zlabel (str | None): String for the z-axis
+
+    Returns:
+
+
+    """
+    label_size = 25
+    ch.title = title
+    ch.x_label = xlabel
+    ch.y_label = ylabel
+    ch.x_axis.label_size = label_size
+    ch.y_axis.label_size = label_size
+    ch.x_axis.tick_label_size = label_size
+    ch.y_axis.tick_label_size = label_size
+    t = ch.GetTitleProperties()
+    t.SetBold(True)
+    t.SetFontSize(30)
+    ch.background_color = "white"
+
+
+def show_and_copy(ch: pv.Chart2D):
+    im_arr = ch.show(screenshot=True, off_screen=True)
+    from PIL import Image
+
+    im = Image.fromarray(im_arr)
+    imf = "imtemp.png"
+    im.save(imf)
+
+    cp_cmd = (
+        f"osascript -e 'on run argv'"
+        f" -e 'set the clipboard to "
+        f"(read POSIX file (POSIX path of first "
+        f"item of argv) as JPEG picture)' "
+        f"-e 'end run' {os.getcwd()}/{imf}"
+    )
+
+    os.system(cp_cmd)
+    os.remove(imf)
+    ch.show()
