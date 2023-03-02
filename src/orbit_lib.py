@@ -4,11 +4,48 @@ from .math_utility import *
 from .attitude_lib import axis_rotation_matrices
 import scipy
 from typing import Callable
+from .attitude_lib import quat_kinematics, rigid_rotation_dynamics, quat_to_dcm
 
-def integrate_orbit_dynamics(rv0: np.ndarray,
-                             perturbations: Callable,
-                             teval: np.ndarray,
-                             int_tol=1e-13) -> np.ndarray:
+
+def integrate_orbit_and_attitude(
+    rv0: np.ndarray,
+    q0: np.ndarray,
+    w0: np.ndarray,
+    itensor: np.ndarray,
+    orbit_perturbations: Callable,
+    body_torque: Callable,
+    teval: np.ndarray,
+    int_tol: float = 1e-13,
+) -> np.ndarray:
+    fun = lambda t, y: np.concatenate(
+        (
+            two_body_dynamics(y[0:6]) + orbit_perturbations(t, y[0:6]),
+            np.concatenate(
+                (
+                    quat_kinematics(y[6:10], y[10:13]),
+                    rigid_rotation_dynamics(
+                        t,
+                        y[10:13],
+                        itensor,
+                        lambda t: body_torque(t, quat_to_dcm(y[6:10]).T @ y[0:3]),
+                    ),
+                )
+            ),
+        )
+    )
+    y0 = np.concatenate((rv0, q0, w0))
+    tspan = [np.min(teval), np.max(teval)]
+    ode_res = scipy.integrate.solve_ivp(
+        fun, tspan, y0, t_eval=teval, rtol=int_tol, atol=int_tol
+    )
+    ode_res = ode_res.y.T
+    # Returns (r, v, q, w)
+    return (ode_res[:, 0:3], ode_res[:, 3:6], ode_res[:, 6:10], ode_res[:, 10:13])
+
+
+def integrate_orbit_dynamics(
+    rv0: np.ndarray, perturbations: Callable, teval: np.ndarray, int_tol=1e-13
+) -> np.ndarray:
     """Integration for orbital dynamics with perturbations
 
     Args:
@@ -21,9 +58,11 @@ def integrate_orbit_dynamics(rv0: np.ndarray,
         np.ndarray nx7: Integrated quaternion [:4, :] and angular velocity [4:, :]
 
     """
-    fun = lambda t, y: two_body_dynamics(y) + perturbations(t,y)
+    fun = lambda t, y: two_body_dynamics(y) + perturbations(t, y)
     tspan = [np.min(teval), np.max(teval)]
-    ode_res = scipy.integrate.solve_ivp(fun, tspan, rv0, t_eval=teval, rtol=int_tol, atol=int_tol)
+    ode_res = scipy.integrate.solve_ivp(
+        fun, tspan, rv0, t_eval=teval, rtol=int_tol, atol=int_tol
+    )
     return ode_res.y.T
 
 

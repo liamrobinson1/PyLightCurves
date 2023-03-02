@@ -4,7 +4,10 @@
 # Installation
 
 ## Mac (Intel or Apple CPU)
-- Prerequisites: `clang` compiler and `python3` (both should be installed by default)
+- Prerequisites: 
+    - `clang` C compiler from XCode Command Line Tools. If installed, running `clang -v` in Terminal should return version information. If that errors, install directly via `xcode-select --install` or through the web at https://developer.apple.com/download/all/
+    - `python3` should be installed by default on all Macs
+    - `OpenGL` installed by default
 - Clone repository to local folder
 - Open terminal at repository top-level folder
 - Run `source init_venv` to create and activate a python virtual environment, install dependencies, compile C executables for OpenGL light curve simulation, and run unit tests

@@ -1,14 +1,11 @@
-import pywavefront
-import matplotlib.tri as mtri
-import matplotlib.pyplot as plt
 import os
 import numpy as np
 import scipy
 from typing import Tuple
+import pyvista as pv
 
 from .math_utility import *
 from .rand_geom import *
-from .vis_utility import vec2cdata
 from .light_lib import Brdf
 
 
@@ -32,14 +29,16 @@ class Object:
         if obj_file is not None:
             self.file_name = obj_file
             self.path = f"{os.environ['MODELDIR']}/{obj_file}"
-            self._obj = pywavefront.Wavefront(
-                self.path, create_materials=True, collect_faces=True
-            )
-            self.v = np.array(self._obj.vertices)
-            self.f = np.array(self._obj.mesh_list[0].faces)
+            self._mesh= pv.read(self.path)
+            self.f = self._mesh.faces.reshape(-1, 4)[:, 1:]
+            self.v = self._mesh.points
         elif obj_vf is not None:
             self.v = obj_vf[0]
             self.f = obj_vf[1]
+            padded_f = np.hstack(
+                (3*np.ones((self.f.shape[0],1), dtype=np.int64), self.f)
+            ).flatten()
+            self._mesh = pv.PolyData(self.v, padded_f)
         else:
             ValueError("Either obj_path or obj_vf must be input")
         self.is_dual = is_dual
@@ -128,31 +127,20 @@ class Object:
             ).T
             self.build_properties()
 
-    def render(self, render_mode: str = "solid"):
-        """Plots the object mesh using a trisurf
+    def render(self, pl: pv.Plotter = None, **kwargs):
+        """Plots the object mesh using pyvista
 
         Args:
-            render_mode (str): Mode option for rendering, currently only supports "solid"
+            pl (pyvista.Plotter): Plotter to render object to
 
         Returns:
 
 
         """
-        linewidth = 0
-        if render_mode == "wireframe":
-            linewidth = 1
-        else:
-            ValueError("object render_mode must be normals")
-
-        plt.gca().plot_trisurf(
-            self.v[:, 0],
-            self.v[:, 1],
-            self.v[:, 2],
-            triangles=self.f,
-            color=(0.7, 0.7, 0.7),
-            shade=True,
-            linewidth=linewidth,
-        )
+        if pl is None:
+            pl = pv.Plotter()
+        pl.add_mesh(self._mesh, **kwargs)
+        pl.show()
 
     def compute_convex_light_curve(
         self, brdf: Brdf, svb: np.ndarray, ovb: np.ndarray

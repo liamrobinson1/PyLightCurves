@@ -4,12 +4,15 @@ from typing import Tuple, Callable, Any
 from .math_utility import *
 from .astro_const import AstroConstants
 
-def integrate_rigid_attitude_dynamics(q0: np.ndarray,
-                                      omega0: np.ndarray, 
-                                      itensor: np.ndarray,
-                                      body_torque: Callable,
-                                      teval: np.ndarray,
-                                      int_tol=1e-13) -> np.ndarray:
+
+def integrate_rigid_attitude_dynamics(
+    q0: np.ndarray,
+    omega0: np.ndarray,
+    itensor: np.ndarray,
+    body_torque: Callable,
+    teval: np.ndarray,
+    int_tol=1e-13,
+) -> np.ndarray:
     """Integration for rigid body rotational dynamics
 
     Args:
@@ -25,12 +28,18 @@ def integrate_rigid_attitude_dynamics(q0: np.ndarray,
 
     """
     fun = lambda t, y: np.concatenate(
-        (quat_kinematics(y[:4], y[4:]), rigid_rotation_dynamics(t, y[4:], itensor, body_torque))
+        (
+            quat_kinematics(y[:4], y[4:]),
+            rigid_rotation_dynamics(t, y[4:], itensor, body_torque),
+        )
     )
     tspan = [np.min(teval), np.max(teval)]
     y0 = np.concatenate((q0, omega0))
-    ode_res = scipy.integrate.solve_ivp(fun, tspan, y0, t_eval=teval, rtol=int_tol, atol=int_tol)
+    ode_res = scipy.integrate.solve_ivp(
+        fun, tspan, y0, t_eval=teval, rtol=int_tol, atol=int_tol
+    )
     return ode_res.y.T
+
 
 def rigid_rotation_dynamics(
     t: float, w: np.ndarray, itensor: np.ndarray, torque: Callable = None
@@ -51,13 +60,14 @@ def rigid_rotation_dynamics(
     (ix, iy, iz) = np.diag(itensor)
     (wx, wy, wz) = w
     if torque is not None:
-        (mx, my, mz) = torque(t, w)
+        (mx, my, mz) = torque(t)
     else:
         (mx, my, mz) = (0, 0, 0)
 
     dwdt[0] = -1 / ix * (iz - iy) * wy * wz + mx / ix
     dwdt[1] = -1 / iy * (ix - iz) * wz * wx + my / iy
     dwdt[2] = -1 / iz * (iy - ix) * wx * wy + mz / iz
+
     return dwdt
 
 
@@ -77,7 +87,9 @@ def gravity_gradient_torque(
     """
     rmag = np.linalg.norm(rvec)
     # Distance from central body COM to satellite COM
-    return 3 * mu / rmag**5 * np.cross(rvec, itensor / 1e6 @ rvec) * 1e3
+    return (
+        3 * mu / rmag**5 * np.cross(rvec.flatten(), (itensor @ rvec).flatten()) / 1e3
+    )
     # Torque applied to body [Nm]
 
 

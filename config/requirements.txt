@@ -1,8 +1,6 @@
 ###### Requirements without Version Specifiers ######
 numpy
 scipy
-matplotlib
-pywavefront
-pyglet
 black
+pyvista
 ###### Requirements with Version Specifiers ######

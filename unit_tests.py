@@ -123,8 +123,8 @@ class TestOrbits(MyTestMethods):
         self.assertAlmostVectorEqual(m_gg, m_gg_truth)
 
     def test_rotation_dynamics(self):
-        m = np.array([1, -1, 2])
-        wdot = rigid_rotation_dynamics(i, w, m)
+        m = lambda t: np.array([1, -1, 2])
+        wdot = rigid_rotation_dynamics(0, w, i, m)
         wdot_truth = np.array([0, 1 / 2, 1 / 3])
         self.assertAlmostVectorEqual(wdot, wdot_truth)
 

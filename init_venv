@@ -1,7 +1,7 @@
 # Set to YOUR local path to the directory containing LightCurveEngine.c 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export LCEDIR=$SCRIPT_DIR/src/engine
-export MODELDIR=$SCRIPT_DIR/models
+export MODELDIR=$SCRIPT_DIR/resources/models
 
 python3 -m venv $SCRIPT_DIR --upgrade-deps
 if test -f bin/activate; then
