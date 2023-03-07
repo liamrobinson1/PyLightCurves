@@ -59,6 +59,40 @@ class TestAttitude(MyTestMethods):
             quat_ang(q[[0, 1], :], q[[1, 0], :]),
         )
 
+    def test_dcm_to_quat(self):
+        q0 = np.array([-0.3966, 0.3619, 0.5710, 0.6211])
+        dcm = quat_to_dcm(q0)
+        self.assertAlmostVectorEqual(q0, dcm_to_quat(dcm))
+
+    def test_torque_free_propagation(self):
+        """Ensures that the numerical integration and semi-analytic
+        torque free attitude motion never diverge from eachother
+        """
+        num_test = 20
+        q0 = rand_quaternions(num_test)
+        w0 = rand_unit_vectors(num_test)
+        itensor = np.diag([1, 2, 3])
+        teval = np.linspace(0, 1, 10)
+
+        max_error = []
+        for i in range(num_test):
+            (quat_anal, _) = propagate_attitude_torque_free(
+                q0[i, :], w0[i, :], itensor, teval
+            )
+            (quat_num, _) = integrate_rigid_attitude_dynamics(
+                q0[i, :], w0[i, :], itensor, teval
+            )
+            max_error.append(
+                np.max(
+                    vecnorm(
+                        quat_upper_hemisphere(quat_anal)
+                        - quat_upper_hemisphere(quat_num)
+                    )
+                )
+            )
+
+        self.assertTrue(np.max(max_error) < 1e-7)
+
 
 class TestMathUtility(MyTestMethods):
     def test_hat(self):

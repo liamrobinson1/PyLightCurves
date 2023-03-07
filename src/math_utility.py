@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import *
 
 
 def sind(v: np.ndarray) -> np.ndarray:
@@ -24,6 +25,11 @@ def acosd(v: np.ndarray) -> np.ndarray:
 def atand(v: np.ndarray) -> np.ndarray:
     """Emulates MATLAB atand() functionality"""
     return np.rad2deg(np.arctan(v))
+
+
+def atan2d(y: np.ndarray, x: np.ndarray) -> np.ndarray:
+    """Emulates MATLAB atan2d() functionality"""
+    return np.rad2deg(np.arctan2(y, x))
 
 
 def hat(v: np.ndarray) -> np.ndarray:
@@ -154,3 +160,44 @@ def close_egi(egi: np.array) -> np.array:
 def remove_zero_rows(v: np.array) -> np.array:
     """Removes any rows from v (np.ndarray nx3) that are all zeros"""
     return np.delete(v, vecnorm(v).flatten() == 0, axis=0)
+
+
+def elliptic_pi_complete(n: np.ndarray, ksquared: np.ndarray) -> np.ndarray:
+    return elliprf(0, 1 - ksquared, 1) + 1 / 3 * n * elliprj(0, 1 - ksquared, 1, 1 - n)
+
+
+def elliptic_pi_incomplete(n: np.ndarray, phi: np.ndarray, ksquared: np.ndarray):
+    c = np.floor((phi + np.pi / 2) / np.pi)
+    phi_shifted = phi - c * np.pi
+    onemk2_sin2phi = 1 - ksquared * np.sin(phi_shifted) ** 2
+    cos2phi = np.cos(phi_shifted) ** 2
+    sin3phi = np.sin(phi_shifted) ** 3
+    n_sin2phi = n * np.sin(phi_shifted) ** 2
+
+    periodic_portion = 2 * c * elliptic_pi_complete(n, ksquared)
+
+    return (
+        np.sin(phi_shifted) * elliprf(cos2phi, onemk2_sin2phi, 1)
+        + 1 / 3 * n * sin3phi * elliprj(cos2phi, onemk2_sin2phi, 1, 1 - n_sin2phi)
+        + periodic_portion
+    )
+
+
+def stack_mat_mult(mats, v) -> np.ndarray:
+    """Multiplies each row in v by each page of mats
+
+    Args:
+        mats (np.ndarray m x m x n): Matrices to multiply by
+        v (np.ndarray n x m): Vectors to be multiplied
+
+    Returns:
+        np.ndarray n x m: Multiplied product
+    """
+
+    if mats.shape[0] == mats.shape[1]:
+        mats = np.moveaxis(mats, -1, 0)
+
+    print(mats.shape, v.shape)
+    assert mats.shape[0] == v.shape[0], "Matrix dimensions to not match vector!"
+    v_deep = np.reshape(v, (mats.shape[0], 3, 1))
+    return np.squeeze(mats @ v_deep)

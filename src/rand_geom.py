@@ -3,6 +3,30 @@ from .math_utility import dot, hat, sph_to_cart
 import numpy as np
 
 
+def rand_quaternions(num: int) -> np.ndarray:
+    """Generates uniform random vectors on S^3
+    (interpreted as unit quaternions)
+
+    Args:
+        num (int): Number of unit vectors to generate
+
+    Returns:
+        np.ndarray num x 4: Sampled quaternions
+
+    """
+    u = np.random.rand(num)
+    v = np.random.rand(num)
+    w = np.random.rand(num)
+    return np.array(
+        [
+            np.sqrt(1 - u) * np.sin(2 * np.pi * v),
+            np.sqrt(1 - u) * np.cos(2 * np.pi * v),
+            np.sqrt(u) * np.sin(2 * np.pi * w),
+            np.sqrt(u) * np.cos(2 * np.pi * w),
+        ]
+    ).T
+
+
 def rand_unit_vectors(num: int) -> np.ndarray:
     """Generates uniform random vectors on S^2
 

@@ -2,6 +2,7 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 export LCEDIR=$SCRIPT_DIR/src/engine
 export MODELDIR=$SCRIPT_DIR/resources/models
+export IMAGEIO_FFMPEG_EXE=$SCRIPT_DIR/bin/ffmpeg
 
 python3 -m venv $SCRIPT_DIR --upgrade-deps
 if test -f bin/activate; then

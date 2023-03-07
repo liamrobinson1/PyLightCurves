@@ -16,6 +16,13 @@
 
 ## Windows
 - TBD, working on this on Friday with Alex
+- Prerequisites:
+    - A C compiler, follow this guide: https://learn.microsoft.com/en-us/cpp/build/walkthrough-compile-a-c-program-on-the-command-line?view=msvc-170 to download a compiler and compile a basic `hello_world.c` executable
+    - Python 3.10, download through https://www.python.org/downloads/windows/
+
+    - User `bash` through WSL to run `init_venv`
+    - `source bin/activate` should be `source Scripts/activate`
+    - Still not sure how exactly to compile with `cl` correctly
 
 # Configuration
 - The `MODELDIR` path set within `init_venv` can be set to a new directory containing `.obj` and `.mtl` files

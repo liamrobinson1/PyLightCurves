@@ -9,13 +9,15 @@ from .astro_coordinates import sun
 
 
 def integrate_orbit_and_attitude(
-    rv0: np.ndarray,
+    r0: np.ndarray,
+    v0: np.ndarray,
     q0: np.ndarray,
     w0: np.ndarray,
     itensor: np.ndarray,
-    orbit_perturbations: Callable,
-    body_torque: Callable,
     teval: np.ndarray,
+    orbit_perturbations: Callable = lambda t, y: np.zeros(3),
+    external_torque: Callable = lambda t, y: np.zeros(3),
+    internal_torque: Callable = lambda t, y: np.zeros(3),
     int_tol: float = 1e-13,
 ) -> np.ndarray:
     fun = lambda t, y: np.concatenate(
@@ -29,19 +31,18 @@ def integrate_orbit_and_attitude(
                         t,
                         y[10:13],
                         itensor,
-                        lambda t: body_torque(t, quat_to_dcm(y[6:10]).T @ y[0:3]),
+                        lambda t: external_torque(t, quat_to_dcm(y[6:10]).T @ y[0:3]),
                     ),
                 )
             ),
         )
     )
-    y0 = np.concatenate((rv0, q0, w0))
+    y0 = np.concatenate((r0.flatten(), v0.flatten(), q0.flatten(), w0.flatten()))
     tspan = [np.min(teval), np.max(teval)]
     ode_res = scipy.integrate.solve_ivp(
         fun, tspan, y0, t_eval=teval, rtol=int_tol, atol=int_tol
     )
     ode_res = ode_res.y.T
-    # Returns (r, v, q, w)
     return (ode_res[:, 0:3], ode_res[:, 3:6], ode_res[:, 6:10], ode_res[:, 10:13])
 
 

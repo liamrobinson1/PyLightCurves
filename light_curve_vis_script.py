@@ -21,5 +21,4 @@ lc = run_engine(brdf, obj.file_name, sun_vectors_body, obs_vectors_body)
 ch = pv.Chart2D()
 ch.line(t, lc, width=3, label="", style="-")
 texit(ch, "Cube Light Curve Test", "Time [s]", "Normalized Irradiance")
-
 show_and_copy(ch)

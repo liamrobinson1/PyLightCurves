@@ -28,3 +28,5 @@ make_registry:
 make_engine:
 	@echo "\n-=-=-=- Compiling Light Curve Engine -=-=-=-\n"
 	${COMPILER} -framework CoreVideo -framework IOKit -framework Cocoa -framework OpenGL ${USE_LIBRAYLIB} LightCurveEngine.c -o LightCurveEngine
+
+	# -lraylib -lopengl32 -lgdi32 -lwinmm

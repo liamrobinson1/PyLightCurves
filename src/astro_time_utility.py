@@ -79,3 +79,13 @@ def date_to_sidereal(date) -> float:
 
     # Computes the exact sidereal time, accounting for the extra 4 mins/day
     return sidereal_beginning_of_day + 1.0027279093 * ut * 3600
+
+
+def jd_now() -> float:
+    """Computes the Julian date at function runtime"""
+    return date_to_jd(now())
+
+
+def now() -> datetime:
+    """Returns the current date object at runtime, set to UTC"""
+    return datetime.now(tz=timezone.utc)

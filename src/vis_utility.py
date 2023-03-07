@@ -3,7 +3,44 @@ import os
 from typing import Union
 import pyvista as pv
 from .astro_const import AstroConstants
-from .math_utility import hat
+from .math_utility import hat, vecnorm
+from .object_lib import Object
+from .attitude_lib import quat_to_rv
+
+
+def vis_attitude_motion(
+    obj: Object,
+    quat: np.ndarray,
+    fname: str = "test.mp4",
+    framerate: int = 60,
+    quality: int = 9,
+    background_color: str = "white",
+):
+    pl = pv.Plotter()
+    pl.open_movie(f"out/{fname}", framerate=framerate, quality=quality)
+    pl.set_background(background_color)
+    pl.add_mesh(obj._mesh)
+    o_obj = obj._mesh.copy()
+    for i in range(quat.shape[0]):
+        rv = quat_to_rv(quat[i, :])
+        new_obj = obj._mesh.copy().rotate_vector(
+            vector=hat(rv), angle=np.rad2deg(vecnorm(rv))
+        )
+        obj._mesh.copy_from(new_obj)
+        pl.write_frame()
+        obj._mesh.copy_from(o_obj)
+    pl.close()
+
+
+def two_sphere(pl: pv.Plotter, radius: float = 1.0, opacity: float = 0.3, **kwargs):
+    sphere = pv.Sphere(
+        radius=radius,
+        theta_resolution=120,
+        phi_resolution=120,
+        start_theta=270.001,
+        end_theta=270,
+    )
+    pl.add_mesh(sphere, opacity=opacity, **kwargs)
 
 
 def plot_earth(pl: pv.Plotter):
@@ -24,10 +61,6 @@ def plot_earth(pl: pv.Plotter):
 
     earth = pv.Texture("resources/textures/earth_tex.jpg")
     pl.add_mesh(sphere, texture=earth, smooth_shading=False)
-    # pl.add_mesh(contours,
-    #             render_lines_as_tubes=True,
-    #             line_width=3,
-    #             cmap="fire")
 
 
 def scatter3(pl: pv.Plotter, v: np.ndarray, **kwargs):
@@ -48,7 +81,7 @@ def scatter3(pl: pv.Plotter, v: np.ndarray, **kwargs):
     pl.add_mesh(pc, render_points_as_spheres=True, **kwargs)
 
 
-def plot3(pl: pv.Plotter, v: np.ndarray, **kwargs):
+def plot3(pl: pv.Plotter, v: np.ndarray, **kwargs) -> pv.PolyData:
     """Replicates MATLAB plot3() with pyvista backend
     Use densely scattered points to avoid confusing splines
 
@@ -65,6 +98,7 @@ def plot3(pl: pv.Plotter, v: np.ndarray, **kwargs):
 
     spline = pv.Spline(v, v.shape[0])
     pl.add_mesh(spline, render_lines_as_tubes=True, **kwargs)
+    return spline
 
 
 def texit(ch: pv.Chart2D, title: str, xlabel: str, ylabel: str, zlabel: str = ""):
