@@ -165,3 +165,4 @@ LightCurveEngine
 *.lcc
 *.lcr
 .vscode
+.ipynb
