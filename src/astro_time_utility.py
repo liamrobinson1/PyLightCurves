@@ -1,33 +1,61 @@
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 import numpy as np
 from typing import Any
+
+
+def beginning_of_day(dates: np.ndarray[datetime]) -> np.ndarray[datetime]:
+    """Finds
+
+    Args:
+        dates (np.ndarray[datetime] nx1) [UTC]: Date array
+
+    Returns:
+        np.ndarray[datetime] nx1 [UTC]: Beginning of day for each date
+
+    """
+    return_naked = False
+    if isinstance(dates, datetime):
+        dates = np.array([dates])
+        return_naked = True
+
+    bod_arr = np.array(
+        [datetime(d.year, d.month, d.day, 0, 0, 0, 0, tzinfo=d.tzinfo) for d in dates]
+    )
+
+    if return_naked:
+        return bod_arr[0]
+    else:
+        return bod_arr
 
 
 def date_to_ut(date) -> float:
     """Converts a datetime object to Universal Time (UT)
 
     Args:
-        date (datetime.datetime) [UTC]: Date object to compute UT for
+        date (datetime) [UTC]: Date object to compute UT for
 
     Returns:
         float [hr]: UT at input date
 
     """
-    assert date.year > 1582, ValueError("date must be after 1582")
-    beginning_of_day = datetime(
-        date.year, date.month, date.day, 00, 00, 00, 00, tzinfo=timezone.utc
-    )
+
+    min_year = np.min([d.year for d in np.array(date).flatten()])
+    assert min_year > 1582, ValueError("date must be after 1582")
+    bod = beginning_of_day(date)
     # Generates the datetime object at the beginning of the day
-    univ_delta = date - beginning_of_day
+    univ_delta = date - bod
     # Calculates the decimal hours since the beginning of the day
-    return univ_delta.seconds / 3600 + univ_delta.microseconds / (3600 * 1e6)
+    if hasattr(univ_delta, "__iter__"):
+        return np.array([dt.total_seconds() / 3600 for dt in univ_delta])
+    else:
+        return univ_delta.total_seconds() / 3600
 
 
 def date_to_jd(date: Any) -> float:
     """Converts datetime to Julian date
 
     Args:
-        date (datetime.datetime) [UTC]: Date object to compute UT for
+        date (datetime) [UTC]: Date object to compute UT for
 
     Returns:
         float: Julian date of input date
@@ -56,7 +84,7 @@ def date_to_sidereal(date) -> float:
     """Converts a datetime to sidereal time
 
     Args:
-        date (datetime.datetime) [UTC]: Date object to compute UT for
+        date (datetime) [UTC]: Date object to compute UT for
 
     Returns:
         float: Sidereal time at the input date
@@ -89,3 +117,23 @@ def jd_now() -> float:
 def now() -> datetime:
     """Returns the current date object at runtime, set to UTC"""
     return datetime.now(tz=timezone.utc)
+
+
+def date_linspace(
+    date_start: datetime, date_stop: datetime, num: int
+) -> np.ndarray[datetime]:
+    """Computes a linspace of datetime objects
+
+    Args:
+        date_start (datetime.datetime) [UTC]: Date object to start at
+        date_stop (datetime.datetime) [UTC]: Date object to stop at
+        num (int): Number of samples to make
+
+    Returns:
+        np.ndarray[datetime]: Sampled linspace of datetimes
+
+    """
+    delta_seconds = (date_stop - date_start).total_seconds() / (int(num) - 1)
+    return np.array(
+        [date_start + timedelta(seconds=n * delta_seconds) for n in range(int(num))]
+    )

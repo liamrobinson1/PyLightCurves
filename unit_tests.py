@@ -1,6 +1,7 @@
 import unittest
 from datetime import datetime, timezone
 import os
+import itertools
 from src.math_utility import *
 from src.attitude_lib import *
 from src.orbit_lib import *
@@ -68,29 +69,37 @@ class TestAttitude(MyTestMethods):
         """Ensures that the numerical integration and semi-analytic
         torque free attitude motion never diverge from eachother
         """
-        num_test = 20
+        num_test = 5
         q0 = rand_quaternions(num_test)
         w0 = rand_unit_vectors(num_test)
-        itensor = np.diag([1, 2, 3])
+        w0 = np.vstack((w0, np.array([
+            [1,0,0],
+            [0,1,0],
+            [0,0,1]
+            ])))
         teval = np.linspace(0, 1, 10)
+        idiags = list(set(itertools.permutations([1, 1, 1, 2, 2, 3, 3], r=3)))
 
         max_error = []
-        for i in range(num_test):
-            (quat_anal, _) = propagate_attitude_torque_free(
-                q0[i, :], w0[i, :], itensor, teval
-            )
-            (quat_num, _) = integrate_rigid_attitude_dynamics(
-                q0[i, :], w0[i, :], itensor, teval
-            )
-            max_error.append(
-                np.max(
-                    vecnorm(
-                        quat_upper_hemisphere(quat_anal)
-                        - quat_upper_hemisphere(quat_num)
+        for idiag in idiags:
+            itensor = np.diag(idiag)
+            for i in range(num_test):
+                (quat_anal, _) = propagate_attitude_torque_free(
+                    q0[i, :], w0[i, :], itensor, teval
+                )
+                (quat_num, _) = integrate_rigid_attitude_dynamics(
+                    q0[i, :], w0[i, :], itensor, teval
+                )
+                max_error.append(
+                    np.max(
+                        vecnorm(
+                            quat_upper_hemisphere(quat_anal)
+                            - quat_upper_hemisphere(quat_num)
+                        )
                     )
                 )
-            )
-
+                if max_error[-1] > 1e-6:
+                    print(itensor, w0[i, :])
         self.assertTrue(np.max(max_error) < 1e-7)
 
 

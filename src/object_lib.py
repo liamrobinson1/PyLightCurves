@@ -56,6 +56,7 @@ class Object:
         self.compute_volume()
         self.get_egi()
         self.get_inner_vertices()
+        self.compute_inertia_tensor()
         if not self.is_dual:
             self.get_dual()
 
@@ -89,7 +90,8 @@ class Object:
 
     def compute_volume(self):
         """Computs the volume via the supports and unique areas"""
-        self.volume = 1 / 3 * np.sum(dot(self.supports, self.unique_areas))
+        self.volume = 1 / 3 * np.sum(self.supports.flatten() *
+                                         self.unique_areas.flatten())
 
     def unique_areas_and_normals(self):
         """Finds groups of unique normals and areas to save rows elsewhere"""
@@ -157,6 +159,54 @@ class Object:
         """
         g = brdf.compute_reflection_matrix(svb, ovb, self.unique_normals)
         return g @ self.unique_areas
+    
+    def compute_inertia_tensor(self):
+        fn = 2 * np.expand_dims(self.face_areas, 1) * self.face_normals
+        (v1,v2,v3) = self.get_face_vertices()
+        (x1,y1,z1) = (v1[:,0], v1[:,1], v1[:,2])
+        (x2,y2,z2) = (v2[:,0], v2[:,1], v2[:,2])
+        (x3,y3,z3) = (v3[:,0], v3[:,1], v3[:,2])
+        m000=self.volume
+        if m000 == 0: # Then the mesh has zero volume, this is waste of time
+            return
+        
+        x_2=((x1+x2)*(x2+x3) + x1**2 + x3**2)/12
+        y_2=((y1+y2)*(y2+y3) + y1**2 + y3**2)/12
+        z_2=((z1+z2)*(z2+z3) + z1**2 + z3**2)/12
+        xy=((x1+x2+x3)*(y1+y2+y3) + x1*y1 + x2*y2 + x3*y3)/24
+        xz=((x1+x2+x3)*(z1+z2+z3) + x1*z1 + x2*z2 + x3*z3)/24
+        yz=((y1+y2+y3)*(z1+z2+z3) + y1*z1 + y2*z2 + y3*z3)/24
+        m100=np.sum(fn*np.array([x_2, 2*xy, 2*xz]).T)/6
+        m010=np.sum(fn*np.array([2*xy, y_2, 2*yz]).T)/6
+        m001=np.sum(fn*np.array([2*xz, 2*yz, z_2]).T)/6
+        # Second order moments (used to determine elements of the inertia tensor)
+        x_3=((x1+x2+x3)*(x1**2+x2**2+x3**2) + x1*x2*x3)/20 
+        y_3=((y1+y2+y3)*(y1**2+y2**2+y3**2) + y1*y2*y3)/20 
+        z_3=((z1+z2+z3)*(z1**2+z2**2+z3**2) + z1*z2*z3)/20 
+        x_2y=((3*y1+y2+y3)*x1**2 + (y1+3*y2+y3)*x2**2 + (y1+y2+3*y3)*x3**2 + (2*y1+2*y2+y3)*x1*x2 + (2*y1+y2+2*y3)*x1*x3 + (y1+2*y2+2*y3)*x2*x3)/60
+        x_2z=((3*z1+z2+z3)*x1**2 + (z1+3*z2+z3)*x2**2 + (z1+z2+3*z3)*x3**2 + (2*z1+2*z2+z3)*x1*x2 + (2*z1+z2+2*z3)*x1*x3 + (z1+2*z2+2*z3)*x2*x3)/60
+        y_2x=((3*x1+x2+x3)*y1**2 + (x1+3*x2+x3)*y2**2 + (x1+x2+3*x3)*y3**2 + (2*x1+2*x2+x3)*y1*y2 + (2*x1+x2+2*x3)*y1*y3 + (x1+2*x2+2*x3)*y2*y3)/60
+        y_2z=((3*z1+z2+z3)*y1**2 + (z1+3*z2+z3)*y2**2 + (z1+z2+3*z3)*y3**2 + (2*z1+2*z2+z3)*y1*y2 + (2*z1+z2+2*z3)*y1*y3 + (z1+2*z2+2*z3)*y2*y3)/60
+        z_2y=((3*y1+y2+y3)*z1**2 + (y1+3*y2+y3)*z2**2 + (y1+y2+3*y3)*z3**2 + (2*y1+2*y2+y3)*z1*z2 + (2*y1+y2+2*y3)*z1*z3 + (y1+2*y2+2*y3)*z2*z3)/60
+        z_2x=((3*x1+x2+x3)*z1**2 + (x1+3*x2+x3)*z2**2 + (x1+x2+3*x3)*z3**2 + (2*x1+2*x2+x3)*z1*z2 + (2*x1+x2+2*x3)*z1*z3 + (x1+2*x2+2*x3)*z2*z3)/60
+        xyz=((x1+x2+x3)*(y1+y2+y3)*(z1+z2+z3) - (y2*z3+y3*z2-4*y1*z1)*x1/2 -(y1*z3+y3*z1-4*y2*z2)*x2/2 - (y1*z2+y2*z1-4*y3*z3)*x3/2)/60
+        m110=np.sum(fn*np.array([x_2y, y_2x, 2*xyz]).T)/6
+        m101=np.sum(fn*np.array([x_2z, 2*xyz, z_2x]).T)/6
+        m011=np.sum(fn*np.array([2*xyz, y_2z, z_2y]).T)/6
+        m200=np.sum(fn*np.array([x_3, 3*x_2y, 3*x_2z]).T)/9
+        m020=np.sum(fn*np.array([3*y_2x, y_3, 3*y_2z]).T)/9
+        m002=np.sum(fn*np.array([3*z_2x, 3*z_2y, z_3]).T)/9
+
+        print(np.array([x_2y, y_2x, 2*xyz]).shape)
+        # Inertia tensor
+        Ixx=m020+m002-(m010**2+m001**2)/m000
+        Iyy=m200+m002-(m100**2+m001**2)/m000
+        Izz=m200+m020-(m100**2+m010**2)/m000
+        Ixy=m110-m100*m010/m000
+        Ixz=m101-m100*m001/m000
+        Iyz=m011-m010*m001/m000
+        self.itensor = np.array([[Ixx, -Ixy, -Ixz], [-Ixy, Iyy, -Iyz], [-Ixz, -Iyz, Izz]])
+
 
 
 def build_dual(normals: np.array, supports: np.array) -> Object:

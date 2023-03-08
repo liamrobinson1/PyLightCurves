@@ -11,15 +11,21 @@ from src.astro_coordinates import sun
 from src.astro_const import AstroConstants
 
 # Setup
+data_points = int(1e2)
+jd0 = jd_now()
+teval = np.linspace(0, 100, data_points)
+
 obj = Object("cube.obj")
+
+print(obj.itensor)
+print(obj.volume)
+
+stopp
 brdf = Brdf("phong", cd=0.5, cs=0.5, n=5)
 w0 = np.array([1, 3, 1])
 q0 = hat(np.array([1, -3, 2, 1]))
 itensor = np.diag([1, 2, 3])
-data_points = int(1e3)
-teval = np.linspace(0, 100, data_points)
 (q, _) = propagate_attitude_torque_free(q0, w0, itensor, teval)
-jd0 = jd_now()
 sun_inertial = sun(jd0 + teval / AstroConstants.earth_sec_in_day)
 obs_inertial = rand_unit_vectors(teval.size)
 

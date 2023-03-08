@@ -193,11 +193,12 @@ def stack_mat_mult(mats, v) -> np.ndarray:
     Returns:
         np.ndarray n x m: Multiplied product
     """
+    (n, m) = v.shape
 
     if mats.shape[0] == mats.shape[1]:
         mats = np.moveaxis(mats, -1, 0)
 
     print(mats.shape, v.shape)
-    assert mats.shape[0] == v.shape[0], "Matrix dimensions to not match vector!"
-    v_deep = np.reshape(v, (mats.shape[0], 3, 1))
+    assert mats.shape[0] == n, "Matrix dimensions to not match vector!"
+    v_deep = np.reshape(v, (n, m, 1))
     return np.squeeze(mats @ v_deep)

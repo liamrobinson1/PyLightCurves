@@ -473,6 +473,8 @@ def analytic_torque_free_attitude(
     tau0: float,
     tau_dot: float,
     is_sam: bool,
+    itensor_org_factor: int = 1,
+    itensor_inv_inds: list = [0, 1, 2],
 ) -> Tuple[np.ndarray, np.ndarray, bool]:
     """Analytically propagates the orientation of an object
     under torque-free rotation forward in time.
@@ -559,7 +561,7 @@ def analytic_torque_free_attitude(
     phi_lambda = -elliptic_pi_incomplete(phi_denom, amp0, ksquared)
 
     # compute the precession angles
-    t = teval - teval[0]
+    t = itensor_org_factor * (teval - teval[0])
     (_, _, _, ampt) = scipy.special.ellipj(tau_dot * t + tau0, ksquared)
     phi_pi = elliptic_pi_incomplete(phi_denom, ampt, ksquared)
 
@@ -577,8 +579,11 @@ def analytic_torque_free_attitude(
         )
 
     quat_r = quat_r_from_eas(hhat, phi, theta, psi, is_sam).T
+    quat_r[:, [0, 1, 2]] = quat_r[:, itensor_inv_inds]
+    if itensor_org_factor == 1:
+        quat_r = quat_inv(quat_r)
     # Compute the quaternions corresponding to the Euler angles
-    quat_bi = quat_add(quat0, quat_inv(quat_r))
+    quat_bi = quat_add(quat0, quat_r)
     return (phi, theta, psi, quat_bi)
 
 
@@ -621,7 +626,10 @@ def quat_r_from_eas(hhat, phi, theta, psi, is_sam):
 
 
 def analytic_torque_free_angular_velocity(
-    omega0: np.ndarray, itensor: np.ndarray, teval: np.ndarray
+    omega0: np.ndarray,
+    itensor: np.ndarray,
+    teval: np.ndarray,
+    itensor_org_factor: int = 1,
 ):
     """Analytically propogates the angular velocity of an object
         assuming no torque is being applied.
@@ -681,7 +689,7 @@ def analytic_torque_free_angular_velocity(
 
     psi = ibig_neg * np.arctan2(sin_phi, cos_phi)
     tau0 = scipy.special.ellipkinc(psi, ksquared)
-    tau = tau_dot * (teval - teval[0]) + tau0
+    tau = itensor_org_factor * tau_dot * (teval - teval[0]) + tau0
     (sn, cn, dn, _) = scipy.special.ellipj(tau, ksquared)
 
     wx = we * np.sqrt(idyn * (iz - idyn) / (ix * (iz - ix))) * cn
@@ -709,12 +717,36 @@ def propagate_attitude_torque_free(
 
     Returns:
         np.ndarray nx4: Orientation of body over time as a quaternion
-        np.ndarray nx3: Angualr velocity of body over time [rad/s]
+        np.ndarray nx3: Angular velocity of body over time [rad/s]
     """
-    (omega, ksquared, tau0, tau_dot, is_sam) = analytic_torque_free_angular_velocity(
-        omega0, itensor, teval
+    is_spherical_itensor = np.unique(np.diag(itensor)).size == 1
+    is_single_axis = (
+        vecnorm(hat(omega0) - np.array([[1, 0, 0]])) < 1e-14 or
+        vecnorm(hat(omega0) - np.array([[0, 1, 0]])) < 1e-14 or
+        vecnorm(hat(omega0) - np.array([[0, 0, 1]])) < 1e-14
     )
-    (phi, theta, psi, quat_anal) = analytic_torque_free_attitude(
+
+    # Checking for single-axis rotation cases
+    if is_spherical_itensor or is_single_axis:
+        # If spherically symmetric
+        t = teval - teval[0]
+        omega = np.tile(omega0, (teval.size, 1))
+        quat_from_initial = rv_to_quat(np.expand_dims(t, 1) * omega)
+        quat = quat_add(np.tile(quat0, (teval.size, 1)), quat_from_initial)
+        return (quat, omega)
+    
+    itensor_inds = np.argsort(np.diag(itensor))
+    itensor_inv_inds = np.argsort(itensor_inds)
+    moved_inds = np.argwhere(itensor_inds != [0, 1, 2]).flatten()
+    itensor_org_factor = 2 * (moved_inds.size % 2 or moved_inds.size == 0) - 1
+    # Figures out how itensor should be organized to satisfy Ix <= Iy <= Iz
+    itensor = np.diag(np.diag(itensor)[itensor_inds])
+    omega0 = omega0[itensor_inds]
+
+    (omega, ksquared, tau0, tau_dot, is_sam) = analytic_torque_free_angular_velocity(
+        omega0, itensor, teval, itensor_org_factor
+    )
+    (phi, theta, psi, quat) = analytic_torque_free_attitude(
         quat0=quat0,
         omega=omega,
         itensor=itensor,
@@ -723,5 +755,10 @@ def propagate_attitude_torque_free(
         tau0=tau0,
         tau_dot=tau_dot,
         is_sam=is_sam,
+        itensor_inv_inds=itensor_inv_inds,
+        itensor_org_factor=itensor_org_factor,
     )
-    return (quat_anal, omega)
+
+    omega = omega[:, itensor_inv_inds]
+
+    return (quat, omega)
